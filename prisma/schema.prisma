@@ -44,28 +44,29 @@ model User {
   @@map("users")
 }
 
-/// Alumni association members
+/// Alumni association members (fields mirror Update Your Alumni Records)
 model Alumni {
   id                 String       @id @default(cuid())
+  /// Upload avatar
   avatarUrl          String?
+  /// Academic records
   registrationNumber String?      @unique
   faculty            String?
   department         String?
   graduationYear     Int?         @map("yearOfEntry")
+  /// Personal records
   surname            String?
   firstName          String?
   otherNames         String?      @map("middleName")
+  dateOfBirth        DateTime?    @db.Date
   email              String?      @unique
   phone              String?
+  passwordHash       String?
   countryOfOrigin    String?      @map("nationality")
   stateOfOrigin      String?
-  town               String?      @map("localGovOfOrigin")
+  homeTown           String?      @map("localGovOfOrigin")
   countryOfResidence String?
   stateOfResidence   String?
-  /// Legacy import fields (kept so existing CSV data is not dropped)
-  sex                String?
-  dateOfBirth        DateTime?    @db.Date
-  homeCurrentAddress String?
   status             AlumniStatus @default(PENDING)
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
@@ -100,4 +101,37 @@ model Executive {
   @@index([sortOrder])
   @@index([alumniId])
   @@map("executives")
+}
+
+/// Academic faculties (e.g. Engineering, Law)
+model Faculty {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  published   Boolean      @default(true)
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  departments Department[]
+
+  @@index([published])
+  @@index([sortOrder])
+  @@map("faculties")
+}
+
+/// Departments belonging to a faculty
+model Department {
+  id        String   @id @default(cuid())
+  name      String
+  published Boolean  @default(true)
+  sortOrder Int      @default(0)
+  facultyId String
+  faculty   Faculty  @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([facultyId, name])
+  @@index([facultyId])
+  @@index([published])
+  @@index([sortOrder])
+  @@map("departments")
 }

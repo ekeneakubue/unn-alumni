@@ -28,13 +28,15 @@ export async function PATCH(
       surname?: string | null;
       firstName?: string | null;
       otherNames?: string | null;
+      dateOfBirth?: string | null;
       email?: string | null;
       phone?: string | null;
       countryOfOrigin?: string | null;
       stateOfOrigin?: string | null;
-      town?: string | null;
+      homeTown?: string | null;
       countryOfResidence?: string | null;
       stateOfResidence?: string | null;
+      password?: string | null;
     };
 
     const faculty = emptyToNull(body.faculty);
@@ -56,13 +58,15 @@ export async function PATCH(
       surname: emptyToNull(body.surname),
       firstName: emptyToNull(body.firstName),
       otherNames: emptyToNull(body.otherNames),
+      dateOfBirth: emptyToNull(body.dateOfBirth),
       email: emptyToNull(body.email)?.toLowerCase() ?? null,
       phone: emptyToNull(body.phone),
       countryOfOrigin: emptyToNull(body.countryOfOrigin),
       stateOfOrigin: emptyToNull(body.stateOfOrigin),
-      town: emptyToNull(body.town),
+      homeTown: emptyToNull(body.homeTown),
       countryOfResidence: emptyToNull(body.countryOfResidence),
       stateOfResidence: emptyToNull(body.stateOfResidence),
+      password: emptyToNull(body.password),
     });
 
     return NextResponse.json({ alumni });

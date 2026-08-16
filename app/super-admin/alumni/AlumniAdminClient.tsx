@@ -1,9 +1,13 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminAlumniView, UiAlumniStatus } from "@/lib/alumni";
+import { buildAlumniCsvTemplate } from "@/lib/alumni-csv";
 import UploadAlumniCsvButton from "./UploadAlumniCsvButton";
+
+const buttonClass =
+  "inline-flex items-center justify-center rounded-[10px] px-4 py-2.5 text-sm font-semibold transition";
 
 function StatusPill({ status }: { status: UiAlumniStatus }) {
   const tone =
@@ -22,15 +26,31 @@ function StatusPill({ status }: { status: UiAlumniStatus }) {
 
 export default function AlumniAdminClient({
   initialAlumni,
+  loadError = null,
 }: {
   initialAlumni: AdminAlumniView[];
+  loadError?: string | null;
 }) {
   const router = useRouter();
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"All" | UiAlumniStatus>(
     "All",
   );
+  const [deletingAll, setDeletingAll] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [errorModalOpen, setErrorModalOpen] = useState(Boolean(loadError));
+  const [errorMessage, setErrorMessage] = useState(loadError ?? "");
+
+  useEffect(() => {
+    if (loadError) {
+      setErrorMessage(loadError);
+      setErrorModalOpen(true);
+    } else {
+      setErrorModalOpen(false);
+      setErrorMessage("");
+    }
+  }, [loadError]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -42,6 +62,7 @@ export default function AlumniAdminClient({
         person.fullName.toLowerCase().includes(q) ||
         (person.email?.toLowerCase().includes(q) ?? false) ||
         (person.registrationNumber?.toLowerCase().includes(q) ?? false) ||
+        (person.faculty?.toLowerCase().includes(q) ?? false) ||
         (person.department?.toLowerCase().includes(q) ?? false) ||
         (person.stateOfOrigin?.toLowerCase().includes(q) ?? false);
       return matchesStatus && matchesQuery;
@@ -50,6 +71,48 @@ export default function AlumniAdminClient({
 
   function handleImported() {
     startTransition(() => router.refresh());
+  }
+
+  function handleDownloadTemplate() {
+    const blob = new Blob([buildAlumniCsvTemplate()], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "alumni-import-template.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleDeleteAll() {
+    if (initialAlumni.length === 0) return;
+
+    const confirmed = window.confirm(
+      `Delete all ${initialAlumni.length} alumni records? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setDeleteError("");
+    setDeletingAll(true);
+
+    try {
+      const response = await fetch("/api/alumni", { method: "DELETE" });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setDeleteError(data.error ?? "Could not delete alumni.");
+        return;
+      }
+
+      startTransition(() => router.refresh());
+    } catch {
+      setDeleteError("Delete failed. Check your connection and try again.");
+    } finally {
+      setDeletingAll(false);
+    }
   }
 
   return (
@@ -67,8 +130,29 @@ export default function AlumniAdminClient({
           </p>
         </div>
 
-        <UploadAlumniCsvButton onImported={handleImported} />
+        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+          <button
+            type="button"
+            onClick={handleDownloadTemplate}
+            className={`${buttonClass} border border-unn-green bg-white text-unn-green hover:bg-unn-green-soft`}
+          >
+            Download CSV Template
+          </button>
+          <UploadAlumniCsvButton onImported={handleImported} />
+          <button
+            type="button"
+            onClick={handleDeleteAll}
+            disabled={deletingAll || initialAlumni.length === 0}
+            className={`${buttonClass} border border-rose-200 bg-white text-rose-700 hover:border-rose-400 hover:bg-rose-50 disabled:opacity-50`}
+          >
+            {deletingAll ? "Deleting…" : "Delete all alumni"}
+          </button>
+        </div>
       </div>
+
+      {deleteError ? (
+        <p className="text-sm text-rose-700">{deleteError}</p>
+      ) : null}
 
       <section className="border border-unn-line bg-white">
         <div className="flex flex-col gap-3 border-b border-unn-line px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
@@ -119,6 +203,7 @@ export default function AlumniAdminClient({
                 <th className="px-5 py-3 font-semibold">Reg. No.</th>
                 <th className="px-5 py-3 font-semibold">Name</th>
                 <th className="px-5 py-3 font-semibold">Email</th>
+                <th className="px-5 py-3 font-semibold">Faculty</th>
                 <th className="px-5 py-3 font-semibold">Department</th>
                 <th className="px-5 py-3 font-semibold">Grad. year</th>
                 <th className="px-5 py-3 font-semibold">Status</th>
@@ -140,6 +225,9 @@ export default function AlumniAdminClient({
                     {person.email ?? "—"}
                   </td>
                   <td className="px-5 py-3.5 text-unn-muted">
+                    {person.faculty ?? "—"}
+                  </td>
+                  <td className="px-5 py-3.5 text-unn-muted">
                     {person.department ?? "—"}
                   </td>
                   <td className="px-5 py-3.5 text-unn-muted">
@@ -156,15 +244,73 @@ export default function AlumniAdminClient({
 
         {filtered.length === 0 ? (
           <div className="px-5 py-12 text-center">
-            <p className="font-display text-2xl text-unn-ink">No alumni found</p>
+            <p className="font-display text-2xl text-unn-ink">
+              {loadError ? "Unable to load alumni" : "No alumni found"}
+            </p>
             <p className="mt-2 text-sm text-unn-muted">
-              {initialAlumni.length === 0
-                ? "Upload a CSV or add members to get started."
-                : "Try another search or status filter."}
+              {loadError
+                ? "A connection problem prevented loading the directory."
+                : initialAlumni.length === 0
+                  ? "Upload a CSV or add members to get started."
+                  : "Try another search or status filter."}
             </p>
           </div>
         ) : null}
       </section>
+
+      {errorModalOpen ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close error overlay"
+            className="absolute inset-0 bg-unn-green-deep/45"
+            onClick={() => setErrorModalOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="alumni-load-error-title"
+            className="relative z-10 w-full max-w-md border border-unn-line bg-white shadow-xl"
+          >
+            <div className="border-b border-unn-line px-6 py-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">
+                Connection issue
+              </p>
+              <h2
+                id="alumni-load-error-title"
+                className="mt-2 font-display text-3xl text-unn-ink"
+              >
+                Couldn’t load alumni
+              </h2>
+            </div>
+            <div className="space-y-4 px-6 py-5">
+              <p className="text-sm leading-relaxed text-unn-muted">
+                {errorMessage ||
+                  "We couldn’t connect to the database. Check your connection and try again."}
+              </p>
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setErrorModalOpen(false)}
+                  className={`${buttonClass} border border-unn-line bg-white text-unn-ink hover:border-unn-green`}
+                >
+                  Dismiss
+                </button>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => {
+                    startTransition(() => router.refresh());
+                  }}
+                  className={`${buttonClass} bg-unn-green text-white hover:bg-unn-green-mid disabled:opacity-60`}
+                >
+                  {isPending ? "Retrying…" : "Try again"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -3,7 +3,6 @@
 import { useRef, useState, type ChangeEvent } from "react";
 import {
   parseAlumniCsv,
-  ALUMNI_CSV_COLUMN_HINT,
   type AlumniCsvRow,
 } from "@/lib/alumni-csv";
 
@@ -17,14 +16,9 @@ const PREVIEW_COLUMNS: { key: keyof AlumniCsvRow; label: string }[] = [
   { key: "surname", label: "Surname" },
   { key: "firstName", label: "First name" },
   { key: "otherNames", label: "Other names" },
-  { key: "graduationYear", label: "Grad. year" },
+  { key: "email", label: "Email" },
   { key: "faculty", label: "Faculty" },
   { key: "department", label: "Department" },
-  { key: "countryOfOrigin", label: "Country of origin" },
-  { key: "stateOfOrigin", label: "State of origin" },
-  { key: "town", label: "Town" },
-  { key: "email", label: "Email" },
-  { key: "phone", label: "Phone" },
 ];
 
 export default function UploadAlumniCsvButton({
@@ -136,10 +130,6 @@ export default function UploadAlumniCsvButton({
         >
           Upload Alumni CSV
         </button>
-
-        <p className="max-w-md text-right text-xs text-unn-muted">
-          Expected Alumni model columns: {ALUMNI_CSV_COLUMN_HINT}
-        </p>
       </div>
 
       {previewOpen ? (

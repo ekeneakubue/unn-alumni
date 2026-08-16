@@ -2,33 +2,50 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 const nav = [
-  { href: "/super-admin", label: "Overview", exact: true },
-  { href: "/super-admin/users", label: "Users" },
-  { href: "/super-admin/alumni", label: "Alumni" },
-  { href: "/super-admin/executives", label: "Executives" },
-  { href: "/super-admin/faculties", label: "Faculties" },
-  { href: "/super-admin/departments", label: "Departments" },
-  { href: "/super-admin/news", label: "News" },
-  { href: "/super-admin/events", label: "Events" },
-  { href: "/super-admin/messages", label: "Messages" },
-  { href: "/super-admin/settings", label: "Settings" },
+  { href: "/alumni", label: "Overview", exact: true },
+  { href: "/alumni/profile", label: "Profile" },
+  { href: "/alumni/events", label: "Events" },
+  { href: "/alumni/news", label: "News" },
 ];
 
-export default function AdminShell({ children }: { children: React.ReactNode }) {
+type AlumniShellProps = {
+  children: React.ReactNode;
+  alumniName: string;
+  alumniInitials: string;
+};
+
+export default function AlumniShell({
+  children,
+  alumniName,
+  alumniInitials,
+}: AlumniShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   function isActive(href: string, exact?: boolean) {
     if (exact) return pathname === href;
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
+  async function handleLogout() {
+    setLoggingOut(true);
+    try {
+      await fetch("/api/alumni/logout", { method: "POST" });
+      router.push("/login");
+      router.refresh();
+    } catch {
+      setLoggingOut(false);
+    }
+  }
+
   return (
-    <div className="min-h-svh bg-unn-mist text-unn-ink [&_button]:rounded-[10px] [&_[role=dialog]]:rounded-[10px]">
+    <div className="min-h-svh bg-unn-mist text-unn-ink">
       {open ? (
         <button
           type="button"
@@ -52,7 +69,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             className="h-9 w-9 object-contain"
           />
           <div className="min-w-0">
-            <p className="font-display text-lg leading-none">Super Admin</p>
+            <p className="font-display text-lg leading-none">Alumni Portal</p>
             <p className="mt-1 truncate text-[0.65rem] uppercase tracking-[0.16em] text-white/55">
               UNN Alumni
             </p>
@@ -61,7 +78,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <p className="px-3 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/40">
-            Management
+            Menu
           </p>
           <ul className="space-y-1">
             {nav.map((item) => {
@@ -85,10 +102,18 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           </ul>
         </nav>
 
-        <div className="border-t border-white/10 p-4">
+        <div className="space-y-2 border-t border-white/10 p-4">
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="block w-full rounded-sm border border-white/20 px-3 py-2.5 text-center text-sm text-white/85 transition hover:border-white hover:bg-white/10 disabled:opacity-60"
+          >
+            {loggingOut ? "Signing out…" : "Log out"}
+          </button>
           <Link
             href="/"
-            className="block rounded-sm border border-white/20 px-3 py-2.5 text-center text-sm text-white/85 transition hover:border-white hover:bg-white/10"
+            className="block rounded-sm px-3 py-2 text-center text-sm text-white/55 transition hover:text-white"
           >
             View public site
           </Link>
@@ -113,36 +138,24 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             <div>
               <p className="text-sm font-semibold text-unn-ink">Dashboard</p>
               <p className="hidden text-xs text-unn-muted sm:block">
-                Alumni association control center
+                Alumni member portal
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="relative hidden h-10 items-center rounded-sm border border-unn-line px-3 text-sm text-unn-muted transition hover:border-unn-green hover:text-unn-green sm:inline-flex"
-            >
-              Search…
-            </button>
-            <button
-              type="button"
-              aria-label="Notifications"
-              className="relative inline-flex h-10 w-10 items-center justify-center border border-unn-line text-sm font-semibold text-unn-green"
-            >
-              3
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-unn-green" />
-            </button>
-            <div className="flex items-center gap-2 border border-unn-line py-1.5 pl-1.5 pr-3">
-              <span className="inline-flex h-7 w-7 items-center justify-center bg-unn-green-deep text-[0.7rem] font-semibold text-white">
-                SA
-              </span>
-              <span className="hidden text-sm font-medium sm:inline">Admin</span>
-            </div>
+          <div className="flex items-center gap-2 border border-unn-line py-1.5 pl-1.5 pr-3">
+            <span className="inline-flex h-7 w-7 items-center justify-center bg-unn-green-deep text-[0.7rem] font-semibold text-white">
+              {alumniInitials}
+            </span>
+            <span className="hidden max-w-[10rem] truncate text-sm font-medium sm:inline">
+              {alumniName}
+            </span>
           </div>
         </header>
 
-        <main className="px-4 py-6 md:px-8 md:py-8">{children}</main>
+        <main className="animate-fade-up px-4 py-6 md:px-8 md:py-8">
+          {children}
+        </main>
       </div>
     </div>
   );

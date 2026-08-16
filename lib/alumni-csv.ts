@@ -3,16 +3,9 @@ export type AlumniCsvRow = {
   surname: string | null;
   firstName: string | null;
   otherNames: string | null;
-  graduationYear: number | null;
+  email: string | null;
   faculty: string | null;
   department: string | null;
-  countryOfOrigin: string | null;
-  stateOfOrigin: string | null;
-  town: string | null;
-  countryOfResidence: string | null;
-  stateOfResidence: string | null;
-  email: string | null;
-  phone: string | null;
 };
 
 export type AlumniCsvParseResult = {
@@ -21,22 +14,15 @@ export type AlumniCsvParseResult = {
   errors: string[];
 };
 
-/** Alumni model fields used for CSV import (excludes id/status/timestamps/avatar). */
+/** CSV import columns only — remaining Alumni fields are filled via verify/update. */
 export const ALUMNI_MODEL_CSV_FIELDS = [
   { key: "registrationNumber" },
   { key: "surname" },
   { key: "firstName" },
   { key: "otherNames" },
-  { key: "graduationYear" },
+  { key: "email" },
   { key: "faculty" },
   { key: "department" },
-  { key: "countryOfOrigin" },
-  { key: "stateOfOrigin" },
-  { key: "town" },
-  { key: "countryOfResidence" },
-  { key: "stateOfResidence" },
-  { key: "email" },
-  { key: "phone" },
 ] as const satisfies ReadonlyArray<{
   key: keyof AlumniCsvRow;
 }>;
@@ -45,25 +31,21 @@ export const ALUMNI_CSV_COLUMN_HINT = ALUMNI_MODEL_CSV_FIELDS.map(
   (field) => field.key,
 ).join(", ");
 
-/** Spreadsheet labels that differ from Alumni model field names. */
+/** Header-only CSV template for alumni bulk import. */
+export function buildAlumniCsvTemplate() {
+  return `${ALUMNI_MODEL_CSV_FIELDS.map((field) => field.key).join(",")}\n`;
+}
+
+/** Spreadsheet labels that differ from Alumni CSV field names. */
 const HEADER_ALIASES: Record<string, keyof AlumniCsvRow> = {
   emailaddress: "email",
-  phoneno: "phone",
-  phonenumber: "phone",
   regno: "registrationNumber",
   registrationno: "registrationNumber",
   middlename: "otherNames",
   othername: "otherNames",
-  yearofentry: "graduationYear",
-  entryyear: "graduationYear",
-  yearofgraduation: "graduationYear",
-  graduationyear: "graduationYear",
-  nationality: "countryOfOrigin",
-  country: "countryOfOrigin",
-  lga: "town",
-  localgovernment: "town",
-  localgovernmentoforigin: "town",
-  townoforigin: "town",
+  facultyname: "faculty",
+  departmentname: "department",
+  dept: "department",
 };
 
 function normalizeHeaderKey(header: string) {
@@ -126,7 +108,23 @@ function splitCsvLine(line: string, delimiter: string): string[] {
 
 function emptyToNull(value: string): string | null {
   const trimmed = value.trim();
-  return trimmed ? trimmed : null;
+  if (!trimmed) return null;
+
+  const normalized = trimmed.toLowerCase().replace(/\s+/g, "");
+  if (
+    normalized === "n/a" ||
+    normalized === "na" ||
+    normalized === "n.a." ||
+    normalized === "n.a" ||
+    normalized === "none" ||
+    normalized === "nil" ||
+    normalized === "-" ||
+    normalized === "--"
+  ) {
+    return null;
+  }
+
+  return trimmed;
 }
 
 export function parseAlumniCsv(
@@ -168,7 +166,7 @@ export function parseAlumniCsv(
       rows: [],
       totalRows: 0,
       errors: [
-        `Could not map any Alumni model columns. Found headers: ${headers.join(" | ") || "(none)"}. Expected: ${ALUMNI_CSV_COLUMN_HINT}`,
+        `Could not map any Alumni CSV columns. Found headers: ${headers.join(" | ") || "(none)"}. Expected: ${ALUMNI_CSV_COLUMN_HINT}`,
       ],
     };
   }
@@ -197,9 +195,6 @@ export function parseAlumniCsv(
       return (cells[index] ?? "").trim();
     };
 
-    const yearRaw = get("graduationYear");
-    const yearParsed = yearRaw ? Number.parseInt(yearRaw, 10) : NaN;
-    const graduationYear = Number.isFinite(yearParsed) ? yearParsed : null;
     const emailRaw = emptyToNull(get("email"));
 
     rows.push({
@@ -207,16 +202,9 @@ export function parseAlumniCsv(
       surname: emptyToNull(get("surname")),
       firstName: emptyToNull(get("firstName")),
       otherNames: emptyToNull(get("otherNames")),
-      graduationYear,
+      email: emailRaw ? emailRaw.toLowerCase() : null,
       faculty: emptyToNull(get("faculty")),
       department: emptyToNull(get("department")),
-      countryOfOrigin: emptyToNull(get("countryOfOrigin")),
-      stateOfOrigin: emptyToNull(get("stateOfOrigin")),
-      town: emptyToNull(get("town")),
-      countryOfResidence: emptyToNull(get("countryOfResidence")),
-      stateOfResidence: emptyToNull(get("stateOfResidence")),
-      email: emailRaw ? emailRaw.toLowerCase() : null,
-      phone: emptyToNull(get("phone")),
     });
   }
 

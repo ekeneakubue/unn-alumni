@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   createAlumniMany,
   createAlumniRecord,
+  deleteAllAlumni,
   listAlumni,
 } from "@/lib/alumni";
 import { parseAlumniCsv } from "@/lib/alumni-csv";
@@ -14,6 +15,19 @@ export async function GET() {
     console.error("GET /api/alumni", error);
     return NextResponse.json(
       { error: "Failed to fetch alumni" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE() {
+  try {
+    const result = await deleteAllAlumni();
+    return NextResponse.json({ count: result.count });
+  } catch (error) {
+    console.error("DELETE /api/alumni", error);
+    return NextResponse.json(
+      { error: "Failed to delete alumni" },
       { status: 500 },
     );
   }
@@ -78,15 +92,17 @@ export async function POST(request: Request) {
         surname?: string | null;
         firstName?: string | null;
         otherNames?: string | null;
+        dateOfBirth?: string | null;
         email?: string | null;
         phone?: string | null;
         countryOfOrigin?: string | null;
         stateOfOrigin?: string | null;
-        town?: string | null;
-        countryOfResidence?: string | null;
-        stateOfResidence?: string | null;
-      };
+        homeTown?: string | null;
+      countryOfResidence?: string | null;
+      stateOfResidence?: string | null;
+      password?: string | null;
     };
+  };
 
     if (body.alumni) {
       const faculty = emptyToNull(body.alumni.faculty);
@@ -108,13 +124,15 @@ export async function POST(request: Request) {
         surname: emptyToNull(body.alumni.surname),
         firstName: emptyToNull(body.alumni.firstName),
         otherNames: emptyToNull(body.alumni.otherNames),
+        dateOfBirth: emptyToNull(body.alumni.dateOfBirth),
         email: emptyToNull(body.alumni.email)?.toLowerCase() ?? null,
         phone: emptyToNull(body.alumni.phone),
         countryOfOrigin: emptyToNull(body.alumni.countryOfOrigin),
         stateOfOrigin: emptyToNull(body.alumni.stateOfOrigin),
-        town: emptyToNull(body.alumni.town),
+        homeTown: emptyToNull(body.alumni.homeTown),
         countryOfResidence: emptyToNull(body.alumni.countryOfResidence),
         stateOfResidence: emptyToNull(body.alumni.stateOfResidence),
+        password: emptyToNull(body.alumni.password),
       });
 
       return NextResponse.json({ alumni }, { status: 201 });
