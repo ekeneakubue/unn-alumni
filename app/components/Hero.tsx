@@ -41,16 +41,11 @@ export default function Hero() {
 
           <div className="animate-fade-up delay-4 mt-9 flex flex-wrap gap-3">
             <Link
-              href="#contact"
+              href="/verify"
+              scroll={false}
               className="inline-flex h-12 items-center rounded-sm bg-white px-6 text-sm font-semibold text-unn-green-deep transition hover:bg-unn-green-soft"
             >
-              Become a Member
-            </Link>
-            <Link
-              href="#about"
-              className="inline-flex h-12 items-center rounded-sm border border-white/35 px-6 text-sm font-semibold text-white transition hover:border-white hover:bg-white/10"
-            >
-              Our Story
+              Verify/Update Your Record
             </Link>
           </div>
         </div>

@@ -7,6 +7,7 @@ import { useState } from "react";
 
 const nav = [
   { href: "/super-admin", label: "Overview", exact: true },
+  { href: "/super-admin/users", label: "Users" },
   { href: "/super-admin/alumni", label: "Alumni" },
   { href: "/super-admin/executives", label: "Executives" },
   { href: "/super-admin/faculties", label: "Faculties" },
@@ -26,7 +27,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="min-h-svh bg-unn-mist text-unn-ink">
+    <div className="min-h-svh bg-unn-mist text-unn-ink [&_button]:rounded-[10px] [&_[role=dialog]]:rounded-[10px]">
       {open ? (
         <button
           type="button"
