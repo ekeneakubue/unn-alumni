@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { AdminAlumniView } from "@/lib/alumni";
 import { getAllCountries, getStatesForCountry } from "@/lib/locations";
+import { resolveAvatarSrc } from "@/lib/avatar-url";
 
 const fieldClass =
   "h-11 w-full border border-unn-line bg-white px-3 text-sm outline-none transition focus:border-unn-green";
@@ -203,6 +204,8 @@ export default function VerifyRecordClient({
   const [modalOpen, setModalOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState("");
+  const avatarPreviewObjectUrlRef = useRef<string | null>(null);
 
   const lookupDepartments = useMemo(() => {
     const faculty = lookupFaculties.find((item) => item.name === lookupFaculty);
@@ -295,12 +298,28 @@ export default function VerifyRecordClient({
     }
   }, [modalOpen]);
 
+  function clearAvatarPreviewObjectUrl() {
+    if (avatarPreviewObjectUrlRef.current) {
+      URL.revokeObjectURL(avatarPreviewObjectUrlRef.current);
+      avatarPreviewObjectUrlRef.current = null;
+    }
+  }
+
+  function setLocalAvatarPreview(file: File) {
+    clearAvatarPreviewObjectUrl();
+    const objectUrl = URL.createObjectURL(file);
+    avatarPreviewObjectUrlRef.current = objectUrl;
+    setAvatarPreviewUrl(objectUrl);
+  }
+
   function closeModal() {
     stopCamera();
     setModalOpen(false);
     setSaveError("");
     setShowPassword(false);
     setShowConfirmPassword(false);
+    clearAvatarPreviewObjectUrl();
+    setAvatarPreviewUrl("");
     setForm(null);
     setAlumniId(null);
     setIsNewRecord(false);
@@ -333,10 +352,15 @@ export default function VerifyRecordClient({
   async function uploadAvatarFile(file: File) {
     setUploadingAvatar(true);
     setSaveError("");
+    setLocalAvatarPreview(file);
 
     try {
+      const previousUrl = form?.avatarUrl?.trim() || "";
       const body = new FormData();
       body.set("avatar", file);
+      if (previousUrl) {
+        body.set("previousUrl", previousUrl);
+      }
       const response = await fetch("/api/alumni/avatar", {
         method: "POST",
         body,
@@ -348,9 +372,48 @@ export default function VerifyRecordClient({
         return;
       }
 
-      updateField("avatarUrl", data.url as string);
+      if (!data.url || typeof data.url !== "string") {
+        setSaveError("Upload succeeded but no image URL was returned.");
+        return;
+      }
+
+      updateField("avatarUrl", data.url);
+      setAvatarPreviewUrl(resolveAvatarSrc(data.url));
+      clearAvatarPreviewObjectUrl();
     } catch {
       setSaveError("Avatar upload failed. Check your connection and try again.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
+  async function removeAvatar() {
+    const previousUrl = form?.avatarUrl?.trim() || "";
+    setSaveError("");
+    setUploadingAvatar(true);
+
+    try {
+      if (previousUrl) {
+        const response = await fetch("/api/alumni/avatar", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: previousUrl }),
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          setSaveError(
+            (data as { error?: string }).error ??
+              "Could not remove avatar from storage.",
+          );
+          return;
+        }
+      }
+
+      updateField("avatarUrl", "");
+      clearAvatarPreviewObjectUrl();
+      setAvatarPreviewUrl("");
+    } catch {
+      setSaveError("Could not remove avatar. Try again.");
     } finally {
       setUploadingAvatar(false);
     }
@@ -468,6 +531,8 @@ export default function VerifyRecordClient({
     setIsNewRecord(false);
     setSaved(false);
     setSaveError("");
+    clearAvatarPreviewObjectUrl();
+    setAvatarPreviewUrl(resolveAvatarSrc(alumni.avatarUrl));
     setForm(toFormState(alumni));
     setModalOpen(true);
   }
@@ -477,6 +542,8 @@ export default function VerifyRecordClient({
     setIsNewRecord(true);
     setSaved(false);
     setSaveError("");
+    clearAvatarPreviewObjectUrl();
+    setAvatarPreviewUrl("");
     const trimmed = verifyValue.trim();
     setForm(
       emptyForm({
@@ -772,12 +839,11 @@ export default function VerifyRecordClient({
                     <div className="flex min-w-0 items-center gap-4">
                       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border border-unn-line bg-unn-mist">
                         {record.avatarUrl ? (
-                          <Image
-                            src={record.avatarUrl}
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={resolveAvatarSrc(record.avatarUrl)}
                             alt=""
-                            fill
-                            className="object-cover"
-                            sizes="56px"
+                            className="h-full w-full object-cover"
                           />
                         ) : (
                           <span className="flex h-full w-full items-center justify-center text-sm font-semibold text-unn-muted">
@@ -896,10 +962,13 @@ export default function VerifyRecordClient({
                             muted
                             className="h-full w-full scale-x-[-1] object-cover"
                           />
-                        ) : form.avatarUrl ? (
+                        ) : avatarPreviewUrl || form.avatarUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={form.avatarUrl}
+                            src={
+                              avatarPreviewUrl ||
+                              resolveAvatarSrc(form.avatarUrl)
+                            }
                             alt="Avatar preview"
                             className="h-full w-full object-cover"
                           />
@@ -978,11 +1047,11 @@ export default function VerifyRecordClient({
                             >
                               Take picture
                             </button>
-                            {form.avatarUrl ? (
+                            {form.avatarUrl || avatarPreviewUrl ? (
                               <button
                                 type="button"
                                 disabled={uploadingAvatar}
-                                onClick={() => updateField("avatarUrl", "")}
+                                onClick={() => void removeAvatar()}
                                 className={`${buttonClass} border border-unn-line bg-white text-unn-ink hover:border-unn-green disabled:opacity-60`}
                               >
                                 Remove

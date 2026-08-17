@@ -126,14 +126,14 @@ export default function UploadAlumniCsvButton({
         <button
           type="button"
           onClick={openPicker}
-          className="inline-flex h-11 items-center rounded-[10px] bg-unn-green px-4 text-sm font-semibold text-white transition hover:bg-unn-green-mid"
+          className="inline-flex h-11 w-full items-center justify-center rounded-[10px] bg-unn-green px-4 text-sm font-semibold text-white transition hover:bg-unn-green-mid sm:w-auto"
         >
           Upload Alumni CSV
         </button>
       </div>
 
       {previewOpen ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-4">
           <button
             type="button"
             aria-label="Close preview overlay"
@@ -144,16 +144,16 @@ export default function UploadAlumniCsvButton({
             role="dialog"
             aria-modal="true"
             aria-labelledby="alumni-csv-preview-title"
-            className="relative z-10 flex max-h-[90vh] w-full max-w-5xl flex-col rounded-[10px] border border-unn-line bg-white shadow-xl"
+            className="relative z-10 flex max-h-[92dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[14px] border border-unn-line bg-white shadow-xl sm:rounded-[10px]"
           >
-            <div className="flex items-start justify-between gap-4 border-b border-unn-line px-6 py-5">
-              <div>
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-unn-line px-4 py-4 sm:px-6 sm:py-5">
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-unn-green-mid">
                   Alumni CSV
                 </p>
                 <h2
                   id="alumni-csv-preview-title"
-                  className="mt-2 font-display text-3xl text-unn-ink"
+                  className="mt-2 font-display text-2xl text-unn-ink sm:text-3xl"
                 >
                   Preview before upload
                 </h2>
@@ -178,13 +178,13 @@ export default function UploadAlumniCsvButton({
                 type="button"
                 onClick={closePreview}
                 aria-label="Close"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-unn-line text-unn-muted transition hover:border-unn-green hover:text-unn-ink"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-unn-line text-unn-muted transition hover:border-unn-green hover:text-unn-ink"
               >
                 ×
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-auto px-6 py-4">
+            <div className="min-h-0 flex-1 overflow-auto overscroll-contain px-4 py-4 sm:px-6">
               {parseErrors.length > 0 ? (
                 <div className="mb-4 rounded-[10px] border border-unn-line bg-unn-mist/60 px-4 py-3 text-sm text-unn-muted">
                   <p className="font-semibold text-unn-ink">
@@ -202,44 +202,71 @@ export default function UploadAlumniCsvButton({
               ) : null}
 
               {previewRows.length > 0 ? (
-                <div className="overflow-x-auto rounded-[10px] border border-unn-line">
-                  <table className="w-full min-w-[72rem] text-left text-sm">
-                    <thead className="bg-unn-mist/80 text-xs uppercase tracking-[0.12em] text-unn-muted">
-                      <tr>
-                        <th className="px-3 py-2.5 font-semibold">#</th>
-                        {PREVIEW_COLUMNS.map((column) => (
-                          <th
-                            key={column.key}
-                            className="px-3 py-2.5 font-semibold"
-                          >
-                            {column.label}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {previewRows.map((row, index) => (
-                        <tr
-                          key={`${row.registrationNumber ?? "row"}-${index}`}
-                          className="border-t border-unn-line/80"
-                        >
-                          <td className="px-3 py-2.5 text-unn-muted">
-                            {index + 1}
-                          </td>
+                <>
+                  <ul className="space-y-3 md:hidden">
+                    {previewRows.map((row, index) => (
+                      <li
+                        key={`${row.registrationNumber ?? "row"}-${index}`}
+                        className="border border-unn-line px-3 py-3"
+                      >
+                        <p className="text-xs font-semibold text-unn-muted">
+                          Row {index + 1}
+                        </p>
+                        <p className="mt-1 font-medium text-unn-ink">
+                          {[row.surname, row.firstName, row.otherNames]
+                            .filter(Boolean)
+                            .join(" ") || "Unnamed"}
+                        </p>
+                        <p className="mt-1 break-all text-sm text-unn-muted">
+                          {row.email ?? "No email"}
+                        </p>
+                        <p className="mt-1 text-sm text-unn-muted">
+                          {row.registrationNumber ?? "No reg. no."}
+                          {row.faculty ? ` · ${row.faculty}` : ""}
+                          {row.department ? ` · ${row.department}` : ""}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="hidden overflow-x-auto overscroll-x-contain touch-pan-x rounded-[10px] border border-unn-line md:block">
+                    <table className="w-full min-w-[56rem] text-left text-sm">
+                      <thead className="bg-unn-mist/80 text-xs uppercase tracking-[0.12em] text-unn-muted">
+                        <tr>
+                          <th className="px-3 py-2.5 font-semibold">#</th>
                           {PREVIEW_COLUMNS.map((column) => (
-                            <td
+                            <th
                               key={column.key}
-                              className="max-w-[12rem] truncate px-3 py-2.5 text-unn-ink"
-                              title={String(row[column.key] ?? "")}
+                              className="px-3 py-2.5 font-semibold"
                             >
-                              {row[column.key] ?? "—"}
-                            </td>
+                              {column.label}
+                            </th>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {previewRows.map((row, index) => (
+                          <tr
+                            key={`${row.registrationNumber ?? "row"}-${index}`}
+                            className="border-t border-unn-line/80"
+                          >
+                            <td className="px-3 py-2.5 text-unn-muted">
+                              {index + 1}
+                            </td>
+                            {PREVIEW_COLUMNS.map((column) => (
+                              <td
+                                key={column.key}
+                                className="max-w-[12rem] truncate px-3 py-2.5 text-unn-ink"
+                                title={String(row[column.key] ?? "")}
+                              >
+                                {row[column.key] ?? "—"}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               ) : (
                 <div className="py-10 text-center">
                   <p className="font-display text-2xl text-unn-ink">
@@ -252,7 +279,7 @@ export default function UploadAlumniCsvButton({
               )}
             </div>
 
-            <div className="flex flex-col gap-3 border-t border-unn-line px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex shrink-0 flex-col gap-3 border-t border-unn-line px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between sm:px-6">
               {importError ? (
                 <p className="text-sm text-rose-700">{importError}</p>
               ) : (
@@ -265,7 +292,7 @@ export default function UploadAlumniCsvButton({
                 <button
                   type="button"
                   onClick={closePreview}
-                  className={`${buttonClass} border border-unn-line bg-white text-unn-ink hover:border-unn-green`}
+                  className={`${buttonClass} w-full border border-unn-line bg-white text-unn-ink hover:border-unn-green sm:w-auto`}
                 >
                   Cancel
                 </button>
@@ -273,7 +300,7 @@ export default function UploadAlumniCsvButton({
                   type="button"
                   onClick={confirmImport}
                   disabled={importing || totalRows === 0}
-                  className={`${buttonClass} bg-unn-green text-white hover:bg-unn-green-mid disabled:opacity-60`}
+                  className={`${buttonClass} w-full bg-unn-green text-white hover:bg-unn-green-mid disabled:opacity-60 sm:w-auto`}
                 >
                   {importing
                     ? "Importing…"

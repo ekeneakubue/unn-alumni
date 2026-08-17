@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const nav = [
   { href: "/alumni", label: "Overview", exact: true },
@@ -28,6 +28,19 @@ export default function AlumniShell({
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
+
   function isActive(href: string, exact?: boolean) {
     if (exact) return pathname === href;
     return pathname === href || pathname.startsWith(`${href}/`);
@@ -45,7 +58,7 @@ export default function AlumniShell({
   }
 
   return (
-    <div className="min-h-svh bg-unn-mist text-unn-ink">
+    <div className="min-h-svh overflow-x-hidden bg-unn-mist text-unn-ink">
       {open ? (
         <button
           type="button"
@@ -56,31 +69,43 @@ export default function AlumniShell({
       ) : null}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[17.5rem] flex-col bg-unn-green-deep text-white transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[min(17.5rem,88vw)] flex-col bg-unn-green-deep pt-[env(safe-area-inset-top)] text-white transition-transform duration-300 lg:w-[17.5rem] lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
-          <Image
-            src="/images/logo.png"
-            alt="UNN crest"
-            width={36}
-            height={36}
-            className="h-9 w-9 object-contain"
-          />
-          <div className="min-w-0">
-            <p className="font-display text-lg leading-none">Alumni Portal</p>
-            <p className="mt-1 truncate text-[0.65rem] uppercase tracking-[0.16em] text-white/55">
-              UNN Alumni
-            </p>
+        <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 sm:h-16 sm:px-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <Image
+              src="/images/logo.png"
+              alt="UNN crest"
+              width={36}
+              height={36}
+              className="h-8 w-8 shrink-0 object-contain sm:h-9 sm:w-9"
+            />
+            <div className="min-w-0">
+              <p className="truncate font-display text-lg leading-none">
+                Alumni Portal
+              </p>
+              <p className="mt-1 truncate text-[0.65rem] uppercase tracking-[0.16em] text-white/55">
+                UNN Alumni
+              </p>
+            </div>
           </div>
+          <button
+            type="button"
+            aria-label="Close sidebar"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center border border-white/20 text-lg text-white/85 lg:hidden"
+            onClick={() => setOpen(false)}
+          >
+            ×
+          </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <p className="px-3 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/40">
+        <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2">
+          <p className="px-3 pb-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/40">
             Menu
           </p>
-          <ul className="space-y-1">
+          <ul className="space-y-0.5">
             {nav.map((item) => {
               const active = isActive(item.href, item.exact);
               return (
@@ -88,7 +113,7 @@ export default function AlumniShell({
                   <Link
                     href={item.href}
                     onClick={() => setOpen(false)}
-                    className={`flex items-center rounded-sm px-3 py-2.5 text-sm transition ${
+                    className={`flex min-h-10 items-center rounded-sm px-3 py-2 text-sm transition ${
                       active
                         ? "bg-white text-unn-green-deep"
                         : "text-white/80 hover:bg-white/10 hover:text-white"
@@ -102,31 +127,31 @@ export default function AlumniShell({
           </ul>
         </nav>
 
-        <div className="space-y-2 border-t border-white/10 p-4">
+        <div className="space-y-1.5 border-t border-white/10 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={handleLogout}
             disabled={loggingOut}
-            className="block w-full rounded-sm border border-white/20 px-3 py-2.5 text-center text-sm text-white/85 transition hover:border-white hover:bg-white/10 disabled:opacity-60"
+            className="block min-h-10 w-full rounded-sm border border-white/20 px-3 py-2 text-center text-sm text-white/85 transition hover:border-white hover:bg-white/10 disabled:opacity-60"
           >
             {loggingOut ? "Signing out…" : "Log out"}
           </button>
           <Link
             href="/"
-            className="block rounded-sm px-3 py-2 text-center text-sm text-white/55 transition hover:text-white"
+            className="block min-h-10 rounded-sm px-3 py-2 text-center text-sm leading-6 text-white/55 transition hover:text-white"
           >
             View public site
           </Link>
         </div>
       </aside>
 
-      <div className="lg:pl-[17.5rem]">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-unn-line bg-white/90 px-4 backdrop-blur md:px-8">
-          <div className="flex items-center gap-3">
+      <div className="min-w-0 lg:pl-[17.5rem]">
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b border-unn-line bg-white/90 px-3 backdrop-blur sm:h-16 sm:px-4 md:px-8">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <button
               type="button"
               aria-label="Open sidebar"
-              className="inline-flex h-10 w-10 items-center justify-center border border-unn-line text-unn-ink lg:hidden"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center border border-unn-line text-unn-ink lg:hidden"
               onClick={() => setOpen(true)}
             >
               <span className="flex flex-col gap-1.5">
@@ -135,25 +160,27 @@ export default function AlumniShell({
                 <span className="block h-0.5 w-4 bg-current" />
               </span>
             </button>
-            <div>
-              <p className="text-sm font-semibold text-unn-ink">Dashboard</p>
-              <p className="hidden text-xs text-unn-muted sm:block">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-unn-ink">
+                Dashboard
+              </p>
+              <p className="hidden truncate text-xs text-unn-muted sm:block">
                 Alumni member portal
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 border border-unn-line py-1.5 pl-1.5 pr-3">
-            <span className="inline-flex h-7 w-7 items-center justify-center bg-unn-green-deep text-[0.7rem] font-semibold text-white">
+          <div className="flex max-w-[10rem] items-center gap-2 border border-unn-line py-1.5 pl-1.5 pr-2 sm:max-w-none sm:pr-3">
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center bg-unn-green-deep text-[0.7rem] font-semibold text-white">
               {alumniInitials}
             </span>
-            <span className="hidden max-w-[10rem] truncate text-sm font-medium sm:inline">
+            <span className="hidden truncate text-sm font-medium sm:inline">
               {alumniName}
             </span>
           </div>
         </header>
 
-        <main className="animate-fade-up px-4 py-6 md:px-8 md:py-8">
+        <main className="min-w-0 px-3 py-5 sm:px-4 sm:py-6 md:px-8 md:py-8">
           {children}
         </main>
       </div>

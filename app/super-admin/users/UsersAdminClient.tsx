@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState, useTransition } from "react";
+import { FormEvent, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminUserView } from "@/lib/users";
 
@@ -76,10 +76,65 @@ function RolePill({ role }: { role: UserRole }) {
   );
 }
 
+function EyeIcon({ open }: { open: boolean }) {
+  if (open) {
+    return (
+      <svg
+        aria-hidden
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        className="h-5 w-5"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"
+        />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      className="h-5 w-5"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+      />
+    </svg>
+  );
+}
+
 export default function UsersAdminClient({
   initialUsers,
+  assignableRoles = [
+    "Super Admin",
+    "Admin",
+    "VC",
+    "Secretary",
+    "Staff",
+  ],
+  canManageSuperAdmin = true,
+  loadError = null,
 }: {
   initialUsers: AdminUserView[];
+  assignableRoles?: UserRole[];
+  canManageSuperAdmin?: boolean;
+  loadError?: string | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -91,12 +146,51 @@ export default function UsersAdminClient({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("Staff");
+  const [showPassword, setShowPassword] = useState(false);
+  const [role, setRole] = useState<UserRole>(
+    assignableRoles.includes("Staff") ? "Staff" : assignableRoles[0] ?? "Staff",
+  );
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const isEditing = editingUserId !== null;
+
+  useEffect(() => {
+    if (!modalOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [modalOpen]);
+
+  const roleGuide = (
+    [
+      {
+        role: "Super Admin",
+        detail: "Full access to every module and settings",
+      },
+      {
+        role: "Admin",
+        detail: "Manage alumni, executives, faculties, and content",
+      },
+      {
+        role: "VC",
+        detail: "Executive oversight of association programmes",
+      },
+      {
+        role: "Secretary",
+        detail: "Handle records, correspondence, and meeting notes",
+      },
+      {
+        role: "Staff",
+        detail: "Day-to-day operational access to assigned modules",
+      },
+    ] as const
+  ).filter(
+    (item) => canManageSuperAdmin || item.role !== "Super Admin",
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -126,7 +220,12 @@ export default function UsersAdminClient({
     setName("");
     setEmail("");
     setPassword("");
-    setRole("Staff");
+    setShowPassword(false);
+    setRole(
+      assignableRoles.includes("Staff")
+        ? "Staff"
+        : assignableRoles[0] ?? "Staff",
+    );
     setFormError("");
     setModalOpen(true);
   }
@@ -136,7 +235,12 @@ export default function UsersAdminClient({
     setName(user.name);
     setEmail(user.email);
     setPassword("");
-    setRole(user.role);
+    setShowPassword(false);
+    setRole(
+      assignableRoles.includes(user.role)
+        ? user.role
+        : assignableRoles[0] ?? "Staff",
+    );
     setFormError("");
     setModalOpen(true);
   }
@@ -144,6 +248,7 @@ export default function UsersAdminClient({
   function closeModal() {
     setModalOpen(false);
     setEditingUserId(null);
+    setShowPassword(false);
     setFormError("");
   }
 
@@ -281,6 +386,15 @@ export default function UsersAdminClient({
 
   return (
     <div className="space-y-6">
+      {loadError ? (
+        <div
+          role="alert"
+          className="border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+        >
+          {loadError}
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-unn-green-mid">
@@ -298,7 +412,7 @@ export default function UsersAdminClient({
         <button
           type="button"
           onClick={openModal}
-          className={`${buttonClass} bg-unn-green text-white hover:bg-unn-green-mid`}
+          className={`${buttonClass} w-full bg-unn-green text-white hover:bg-unn-green-mid sm:w-auto`}
         >
           Add User
         </button>
@@ -338,7 +452,7 @@ export default function UsersAdminClient({
       </section>
 
       <section className="border border-unn-line bg-white">
-        <div className="flex flex-col gap-3 border-b border-unn-line px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 border-b border-unn-line px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="font-display text-2xl text-unn-ink">Team access</h2>
             <p className="mt-1 text-sm text-unn-muted">
@@ -371,17 +485,73 @@ export default function UsersAdminClient({
                 className="h-10 w-full rounded-[10px] border border-unn-line bg-white px-3 text-sm outline-none transition focus:border-unn-green"
               >
                 <option value="All">All roles</option>
-                <option value="Super Admin">Super Admin</option>
-                <option value="Admin">Admin</option>
-                <option value="VC">VC</option>
-                <option value="Secretary">Secretary</option>
-                <option value="Staff">Staff</option>
+                {assignableRoles.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
               </select>
             </label>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <ul className="divide-y divide-unn-line md:hidden">
+          {filtered.map((user) => (
+            <li key={user.id} className="space-y-3 px-4 py-4">
+              <div className="flex items-start gap-3">
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-unn-green-deep text-xs font-semibold text-white">
+                  {user.initials}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-unn-ink">{user.name}</p>
+                  <p className="truncate text-xs text-unn-muted">{user.email}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <RolePill role={user.role} />
+                    <StatusPill status={user.status} />
+                  </div>
+                  <p className="mt-2 text-xs text-unn-muted">{user.lastActive}</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => openEditModal(user)}
+                  aria-label={`Edit ${user.name}`}
+                  className={`${iconButtonClass} h-10 w-10 text-unn-green hover:bg-unn-green-soft`}
+                >
+                  <EditIcon />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteUser(user)}
+                  disabled={deletingId === user.id}
+                  aria-label={`Delete ${user.name}`}
+                  className={`${iconButtonClass} h-10 w-10 text-rose-600 hover:bg-rose-50 disabled:opacity-50`}
+                >
+                  <DeleteIcon />
+                </button>
+                {user.status === "Invited" ? (
+                  <button
+                    type="button"
+                    className="min-h-10 rounded-[10px] px-3 py-2 text-xs font-semibold text-unn-muted transition hover:bg-unn-mist hover:text-unn-ink"
+                  >
+                    Resend invite
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => cycleStatus(user.id)}
+                    className="min-h-10 rounded-[10px] px-3 py-2 text-xs font-semibold text-unn-muted transition hover:bg-unn-mist hover:text-unn-ink"
+                  >
+                    {user.status === "Suspended" ? "Reactivate" : "Suspend"}
+                  </button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <div className="hidden overflow-x-auto overscroll-x-contain touch-pan-x md:block">
           <table className="w-full min-w-[52rem] text-left text-sm">
             <thead className="bg-unn-mist/80 text-xs uppercase tracking-[0.12em] text-unn-muted">
               <tr>
@@ -469,41 +639,30 @@ export default function UsersAdminClient({
 
         {filtered.length === 0 ? (
           <div className="px-5 py-12 text-center">
-            <p className="font-display text-2xl text-unn-ink">No users found</p>
+            <p className="font-display text-2xl text-unn-ink">
+              {loadError ? "Unable to load users" : "No users found"}
+            </p>
             <p className="mt-2 text-sm text-unn-muted">
-              {users.length === 0
-                ? "Add a user to get started."
-                : "Try another search or role filter."}
+              {loadError
+                ? "Refresh the page once your database connection is stable."
+                : users.length === 0
+                  ? "Add a user to get started."
+                  : "Try another search or role filter."}
             </p>
           </div>
         ) : null}
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {(
-          [
-            {
-              role: "Super Admin",
-              detail: "Full access to every module and settings",
-            },
-            {
-              role: "Admin",
-              detail: "Manage alumni, executives, faculties, and content",
-            },
-            {
-              role: "VC",
-              detail: "Executive oversight of association programmes",
-            },
-            {
-              role: "Secretary",
-              detail: "Handle records, correspondence, and meeting notes",
-            },
-            {
-              role: "Staff",
-              detail: "Day-to-day operational access to assigned modules",
-            },
-          ] as const
-        ).map((item) => (
+      <section
+        className={`grid gap-4 md:grid-cols-2 ${
+          roleGuide.length >= 5
+            ? "xl:grid-cols-5"
+            : roleGuide.length === 4
+              ? "xl:grid-cols-4"
+              : "xl:grid-cols-3"
+        }`}
+      >
+        {roleGuide.map((item) => (
           <article
             key={item.role}
             className="border border-unn-line bg-white p-5"
@@ -522,7 +681,7 @@ export default function UsersAdminClient({
       </section>
 
       {modalOpen ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-4">
           <button
             type="button"
             aria-label="Close modal overlay"
@@ -533,16 +692,16 @@ export default function UsersAdminClient({
             role="dialog"
             aria-modal="true"
             aria-labelledby="user-modal-title"
-            className="relative z-10 w-full max-w-lg rounded-[10px] border border-unn-line bg-white p-6 shadow-xl"
+            className="relative z-10 flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-[14px] border border-unn-line bg-white shadow-xl sm:rounded-[10px]"
           >
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-unn-line px-4 py-4 sm:px-6 sm:py-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-unn-green-mid">
                   Users
                 </p>
                 <h2
                   id="user-modal-title"
-                  className="mt-2 font-display text-3xl text-unn-ink"
+                  className="mt-2 font-display text-2xl text-unn-ink sm:text-3xl"
                 >
                   {isEditing ? "Edit user" : "Add new user"}
                 </h2>
@@ -556,13 +715,16 @@ export default function UsersAdminClient({
                 type="button"
                 onClick={closeModal}
                 aria-label="Close"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-unn-line text-unn-muted transition hover:border-unn-green hover:text-unn-ink"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-unn-line text-unn-muted transition hover:border-unn-green hover:text-unn-ink"
               >
                 ×
               </button>
             </div>
 
-            <form onSubmit={handleSubmitUser} className="mt-6 space-y-4">
+            <form
+              onSubmit={handleSubmitUser}
+              className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-5"
+            >
               <label className="grid gap-2 text-sm">
                 <span className="font-medium text-unn-ink">Full name</span>
                 <input
@@ -590,20 +752,32 @@ export default function UsersAdminClient({
                 <span className="font-medium text-unn-ink">
                   {isEditing ? "New password (optional)" : "Password"}
                 </span>
-                <input
-                  required={!isEditing}
-                  type="password"
-                  minLength={8}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder={
-                    isEditing
-                      ? "Leave blank to keep current password"
-                      : "At least 8 characters"
-                  }
-                  autoComplete="new-password"
-                  className="h-11 rounded-[10px] border border-unn-line bg-white px-3 outline-none transition focus:border-unn-green"
-                />
+                <div className="relative">
+                  <input
+                    required={!isEditing}
+                    type={showPassword ? "text" : "password"}
+                    minLength={6}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder={
+                      isEditing
+                        ? "Leave blank to keep current password"
+                        : "At least 6 characters"
+                    }
+                    autoComplete="new-password"
+                    className="h-11 w-full rounded-[10px] border border-unn-line bg-white px-3 pr-11 outline-none transition focus:border-unn-green"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((current) => !current)}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
+                    className="absolute inset-y-0 right-0 inline-flex w-11 items-center justify-center text-unn-muted transition hover:text-unn-green"
+                  >
+                    <EyeIcon open={showPassword} />
+                  </button>
+                </div>
               </label>
 
               <label className="grid gap-2 text-sm">
@@ -613,11 +787,11 @@ export default function UsersAdminClient({
                   onChange={(event) => setRole(event.target.value as UserRole)}
                   className="h-11 rounded-[10px] border border-unn-line bg-white px-3 outline-none transition focus:border-unn-green"
                 >
-                  <option value="Super Admin">Super Admin</option>
-                  <option value="Admin">Admin</option>
-                  <option value="VC">VC</option>
-                  <option value="Secretary">Secretary</option>
-                  <option value="Staff">Staff</option>
+                  {assignableRoles.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
                 </select>
               </label>
 

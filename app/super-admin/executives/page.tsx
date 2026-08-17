@@ -118,13 +118,24 @@ export default function ExecutivesAdminPage() {
 
         <button
           type="button"
-          className="inline-flex h-11 items-center justify-center bg-unn-green px-4 text-sm font-semibold text-white transition hover:bg-unn-green-mid"
+          className="inline-flex h-11 w-full items-center justify-center bg-unn-green px-4 text-sm font-semibold text-white transition hover:bg-unn-green-mid sm:w-auto"
         >
           Add Executive
         </button>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <label className="block w-full lg:hidden">
+        <span className="sr-only">Search executives</span>
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search name, role, faculty…"
+          className="h-10 w-full border border-unn-line bg-white px-3 text-sm outline-none transition focus:border-unn-green"
+        />
+      </label>
+
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <article className="border border-unn-line bg-white p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-unn-muted">
             Total roles
@@ -150,7 +161,7 @@ export default function ExecutivesAdminPage() {
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {executives
+        {filtered
           .filter((person) => person.name !== "Vacant")
           .map((person) => (
             <article
@@ -204,7 +215,7 @@ export default function ExecutivesAdminPage() {
           ))}
       </section>
 
-      <section className="border border-unn-line bg-white">
+      <section className="hidden border border-unn-line bg-white lg:block">
         <div className="flex flex-col gap-3 border-b border-unn-line px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-display text-2xl text-unn-ink">
@@ -228,7 +239,7 @@ export default function ExecutivesAdminPage() {
           </label>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
           <table className="w-full min-w-[52rem] text-left text-sm">
             <thead className="bg-unn-mist/80 text-xs uppercase tracking-[0.12em] text-unn-muted">
               <tr>

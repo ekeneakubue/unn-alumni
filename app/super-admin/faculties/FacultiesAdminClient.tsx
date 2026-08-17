@@ -273,7 +273,7 @@ export default function FacultiesAdminClient({
         </div>
       ) : null}
 
-      <section className="border border-unn-line bg-white">
+      <section className="hidden border border-unn-line bg-white lg:block">
         <div className="border-b border-unn-line px-5 py-4">
           <h2 className="font-display text-2xl text-unn-ink">Faculty table</h2>
           <p className="mt-1 text-sm text-unn-muted">
@@ -281,7 +281,7 @@ export default function FacultiesAdminClient({
           </p>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
           <table className="w-full min-w-[48rem] text-left text-sm">
             <thead className="bg-unn-mist/80 text-xs uppercase tracking-[0.12em] text-unn-muted">
               <tr>
@@ -336,7 +336,7 @@ export default function FacultiesAdminClient({
       </section>
 
       {modalOpen ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-4">
           <button
             type="button"
             aria-label="Close modal overlay"
@@ -347,7 +347,7 @@ export default function FacultiesAdminClient({
             role="dialog"
             aria-modal="true"
             aria-labelledby="add-faculty-title"
-            className="relative z-10 w-full max-w-lg border border-unn-line bg-white shadow-xl"
+            className="relative z-10 max-h-[92dvh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-[14px] border border-unn-line bg-white shadow-xl sm:rounded-none"
           >
             <div className="flex items-start justify-between gap-4 border-b border-unn-line px-6 py-5">
               <div>

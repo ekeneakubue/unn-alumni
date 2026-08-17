@@ -1,17 +1,21 @@
 import { NextResponse } from "next/server";
+import {
+  assignableRolesFor,
+  canManageUsersAs,
+  getSessionStaff,
+} from "@/lib/staff-auth";
 import { createUser, listUsers, type UiUserRole } from "@/lib/users";
-
-const roles: UiUserRole[] = [
-  "Super Admin",
-  "Admin",
-  "VC",
-  "Secretary",
-  "Staff",
-];
 
 export async function GET() {
   try {
-    const users = await listUsers();
+    const staff = await getSessionStaff();
+    if (!staff || !canManageUsersAs(staff.dbRole)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const users = await listUsers({
+      excludeSuperAdmin: staff.dbRole !== "SUPER_ADMIN",
+    });
     return NextResponse.json({ users });
   } catch (error) {
     console.error("GET /api/users", error);
@@ -24,6 +28,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const staff = await getSessionStaff();
+    if (!staff || !canManageUsersAs(staff.dbRole)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const allowedRoles = assignableRolesFor(staff.dbRole);
     const body = (await request.json()) as {
       name?: string;
       email?: string;
@@ -36,16 +46,21 @@ export async function POST(request: Request) {
     const password = body.password ?? "";
     const role = body.role as UiUserRole | undefined;
 
-    if (!name || !email || !role || !roles.includes(role)) {
+    if (!name || !email || !role || !allowedRoles.includes(role)) {
       return NextResponse.json(
-        { error: "name, email, and a valid role are required" },
+        {
+          error:
+            staff.dbRole === "ADMIN"
+              ? "name, email, and a valid non–Super Admin role are required"
+              : "name, email, and a valid role are required",
+        },
         { status: 400 },
       );
     }
 
-    if (password.length < 8) {
+    if (password.length < 6) {
       return NextResponse.json(
-        { error: "Password must be at least 8 characters" },
+        { error: "Password must be at least 6 characters" },
         { status: 400 },
       );
     }

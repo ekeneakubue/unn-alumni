@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { withDbRetry } from "@/lib/db-retry";
+import { FACULTIES } from "@/lib/faculties";
 
 export type FacultyDepartmentView = {
   id: string;
@@ -56,28 +58,30 @@ export async function listFaculties(options?: {
 }): Promise<FacultyWithDepartments[]> {
   const publishedOnly = options?.publishedOnly ?? false;
 
-  const faculties = await prisma.faculty.findMany({
-    where: publishedOnly ? { published: true } : undefined,
-    orderBy: [{ name: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      published: true,
-      sortOrder: true,
-      departments: {
-        where: publishedOnly ? { published: true } : undefined,
-        orderBy: [{ name: "asc" }],
-        select: {
-          id: true,
-          name: true,
-          published: true,
-          sortOrder: true,
+  return withDbRetry("listFaculties", async () => {
+    const faculties = await prisma.faculty.findMany({
+      where: publishedOnly ? { published: true } : undefined,
+      orderBy: [{ name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        published: true,
+        sortOrder: true,
+        departments: {
+          where: publishedOnly ? { published: true } : undefined,
+          orderBy: [{ name: "asc" }],
+          select: {
+            id: true,
+            name: true,
+            published: true,
+            sortOrder: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  return faculties;
+    return faculties;
+  });
 }
 
 export async function listAdminFaculties(): Promise<AdminFacultyView[]> {
@@ -100,11 +104,22 @@ export async function listAdminFaculties(): Promise<AdminFacultyView[]> {
 export async function listPublishedFacultiesForSelect(): Promise<
   { name: string; departments: string[] }[]
 > {
-  const faculties = await listFaculties({ publishedOnly: true });
-  return faculties.map((faculty) => ({
-    name: faculty.name,
-    departments: faculty.departments.map((department) => department.name),
-  }));
+  try {
+    const faculties = await listFaculties({ publishedOnly: true });
+    return faculties.map((faculty) => ({
+      name: faculty.name,
+      departments: faculty.departments.map((department) => department.name),
+    }));
+  } catch (error) {
+    console.warn(
+      "listPublishedFacultiesForSelect: using static faculty list after DB error",
+      error instanceof Error ? error.message : error,
+    );
+    return FACULTIES.map((faculty) => ({
+      name: faculty.name,
+      departments: [...faculty.departments],
+    }));
+  }
 }
 
 export async function getDepartmentsByFacultyName(facultyName: string) {

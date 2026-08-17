@@ -27,10 +27,11 @@ function createPrismaClient() {
     globalForPrisma.pgPool ??
     new Pool({
       connectionString,
-      max: 10,
-      idleTimeoutMillis: 20_000,
-      connectionTimeoutMillis: 15_000,
+      max: 5,
+      idleTimeoutMillis: 10_000,
+      connectionTimeoutMillis: 20_000,
       keepAlive: true,
+      allowExitOnIdle: true,
       ssl:
         connectionString.includes("sslmode=")
           ? { rejectUnauthorized: false }

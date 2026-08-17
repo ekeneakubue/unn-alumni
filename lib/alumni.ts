@@ -5,6 +5,8 @@ import type {
   AlumniStatus as DbAlumniStatus,
 } from "@/generated/prisma/client";
 import type { AlumniCsvRow } from "@/lib/alumni-csv";
+import { resolveAvatarSrc } from "@/lib/avatar-url";
+import { withDbRetry } from "@/lib/db-retry";
 import { listPublishedFacultiesForSelect } from "@/lib/faculty";
 
 export type UiAlumniStatus = "Pending" | "Approved" | "Review";
@@ -114,6 +116,16 @@ export function toAdminAlumniView(alumni: Alumni): AdminAlumniView {
   };
 }
 
+/** Resolve stored avatar paths to app media URLs for client display. */
+export function toPublicAlumniView(alumni: Alumni): AdminAlumniView {
+  const view = toAdminAlumniView(alumni);
+  const resolved = resolveAvatarSrc(view.avatarUrl);
+  return {
+    ...view,
+    avatarUrl: resolved || null,
+  };
+}
+
 export async function listAlumni() {
   const alumni = await prisma.alumni.findMany({
     orderBy: [{ createdAt: "desc" }],
@@ -212,44 +224,46 @@ function mergeFacultyOptions(
 export async function listAlumniFacultiesForSelect(): Promise<
   AlumniFacultyOption[]
 > {
-  const rows = await prisma.alumni.findMany({
-    where: {
-      faculty: { not: null },
-    },
-    select: {
-      faculty: true,
-      department: true,
-    },
+  return withDbRetry("listAlumniFacultiesForSelect", async () => {
+    const rows = await prisma.alumni.findMany({
+      where: {
+        faculty: { not: null },
+      },
+      select: {
+        faculty: true,
+        department: true,
+      },
+    });
+
+    const byFaculty = new Map<string, Set<string>>();
+
+    for (const row of rows) {
+      const faculty = row.faculty?.trim();
+      if (!faculty) continue;
+
+      let departments = byFaculty.get(faculty);
+      if (!departments) {
+        departments = new Set<string>();
+        byFaculty.set(faculty, departments);
+      }
+
+      const department = row.department?.trim();
+      if (department) {
+        departments.add(department);
+      }
+    }
+
+    return Array.from(byFaculty.entries())
+      .map(([name, departments]) => ({
+        name,
+        departments: Array.from(departments).sort((a, b) =>
+          a.localeCompare(b, undefined, { sensitivity: "base" }),
+        ),
+      }))
+      .sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+      );
   });
-
-  const byFaculty = new Map<string, Set<string>>();
-
-  for (const row of rows) {
-    const faculty = row.faculty?.trim();
-    if (!faculty) continue;
-
-    let departments = byFaculty.get(faculty);
-    if (!departments) {
-      departments = new Set<string>();
-      byFaculty.set(faculty, departments);
-    }
-
-    const department = row.department?.trim();
-    if (department) {
-      departments.add(department);
-    }
-  }
-
-  return Array.from(byFaculty.entries())
-    .map(([name, departments]) => ({
-      name,
-      departments: Array.from(departments).sort((a, b) =>
-        a.localeCompare(b, undefined, { sensitivity: "base" }),
-      ),
-    }))
-    .sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
-    );
 }
 
 /** Alumni values merged with published Faculty/Department catalog for /verify. */
@@ -258,13 +272,13 @@ export async function listVerifyFacultiesForSelect(): Promise<
 > {
   const [fromAlumni, fromCatalog] = await Promise.all([
     listAlumniFacultiesForSelect().catch((error) => {
-      console.error("listAlumniFacultiesForSelect", error);
+      console.warn(
+        "listAlumniFacultiesForSelect failed",
+        error instanceof Error ? error.message : error,
+      );
       return [] as AlumniFacultyOption[];
     }),
-    listPublishedFacultiesForSelect().catch((error) => {
-      console.error("listPublishedFacultiesForSelect", error);
-      return [] as AlumniFacultyOption[];
-    }),
+    listPublishedFacultiesForSelect(),
   ]);
 
   return mergeFacultyOptions([fromAlumni, fromCatalog]);
@@ -304,7 +318,7 @@ export async function findAlumniByLookup(input: {
     take: 25,
   });
 
-  return alumni.map(toAdminAlumniView);
+  return alumni.map(toPublicAlumniView);
 }
 
 export async function updateAlumniRecord(id: string, input: AlumniRecordInput) {

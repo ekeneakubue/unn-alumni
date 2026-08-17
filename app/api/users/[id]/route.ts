@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import {
+  assignableRolesFor,
+  canManageUsersAs,
+  getSessionStaff,
+} from "@/lib/staff-auth";
+import {
   deleteUser,
+  getUserById,
   updateUser,
   updateUserStatus,
   type UiUserRole,
@@ -8,20 +14,33 @@ import {
 } from "@/lib/users";
 
 const statuses: UiUserStatus[] = ["Active", "Invited", "Suspended"];
-const roles: UiUserRole[] = [
-  "Super Admin",
-  "Admin",
-  "VC",
-  "Secretary",
-  "Staff",
-];
 
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   try {
+    const staff = await getSessionStaff();
+    if (!staff || !canManageUsersAs(staff.dbRole)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await context.params;
+    const existing = await getUserById(id);
+    if (!existing) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    if (
+      staff.dbRole === "ADMIN" &&
+      existing.role === "Super Admin"
+    ) {
+      return NextResponse.json(
+        { error: "Admins cannot manage Super Admin accounts" },
+        { status: 403 },
+      );
+    }
+
     const body = (await request.json()) as {
       status?: string;
       name?: string;
@@ -42,21 +61,27 @@ export async function PATCH(
       return NextResponse.json({ user });
     }
 
+    const allowedRoles = assignableRolesFor(staff.dbRole);
     const name = body.name?.trim() ?? "";
     const email = body.email?.trim().toLowerCase() ?? "";
     const role = body.role as UiUserRole | undefined;
     const password = body.password?.trim() ?? "";
 
-    if (!name || !email || !role || !roles.includes(role)) {
+    if (!name || !email || !role || !allowedRoles.includes(role)) {
       return NextResponse.json(
-        { error: "name, email, and a valid role are required" },
+        {
+          error:
+            staff.dbRole === "ADMIN"
+              ? "name, email, and a valid non–Super Admin role are required"
+              : "name, email, and a valid role are required",
+        },
         { status: 400 },
       );
     }
 
-    if (password && password.length < 8) {
+    if (password && password.length < 6) {
       return NextResponse.json(
-        { error: "Password must be at least 8 characters" },
+        { error: "Password must be at least 6 characters" },
         { status: 400 },
       );
     }
@@ -89,7 +114,27 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> },
 ) {
   try {
+    const staff = await getSessionStaff();
+    if (!staff || !canManageUsersAs(staff.dbRole)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await context.params;
+    const existing = await getUserById(id);
+    if (!existing) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    if (
+      staff.dbRole === "ADMIN" &&
+      existing.role === "Super Admin"
+    ) {
+      return NextResponse.json(
+        { error: "Admins cannot manage Super Admin accounts" },
+        { status: 403 },
+      );
+    }
+
     await deleteUser(id);
     return NextResponse.json({ ok: true });
   } catch (error) {

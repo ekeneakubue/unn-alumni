@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const links = [
   { href: "#about", label: "About" },
@@ -11,9 +11,16 @@ const links = [
   { href: "#contact", label: "Contact" },
 ];
 
+const loginItems = [
+  { href: "/login", label: "Alumni Login" },
+  { href: "/staff/login", label: "Admin Login" },
+];
+
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const loginRef = useRef<HTMLLIElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -28,6 +35,30 @@ export default function Navbar() {
       document.body.style.overflow = "";
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!loginOpen) return;
+
+    function onPointerDown(event: MouseEvent) {
+      if (
+        loginRef.current &&
+        !loginRef.current.contains(event.target as Node)
+      ) {
+        setLoginOpen(false);
+      }
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setLoginOpen(false);
+    }
+
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [loginOpen]);
 
   return (
     <header
@@ -72,13 +103,42 @@ export default function Navbar() {
               </Link>
             </li>
           ))}
-          <li>
-            <Link
-              href="#contact"
-              className="inline-flex h-10 items-center rounded-sm bg-white px-4 text-sm font-semibold text-unn-green-deep transition hover:bg-unn-green-soft"
+          <li ref={loginRef} className="relative">
+            <button
+              type="button"
+              aria-expanded={loginOpen}
+              aria-haspopup="menu"
+              onClick={() => setLoginOpen((value) => !value)}
+              className="inline-flex h-10 items-center gap-2 rounded-sm bg-white px-4 text-sm font-semibold text-unn-green-deep transition hover:bg-unn-green-soft"
             >
-              Join Network
-            </Link>
+              Login
+              <span
+                aria-hidden
+                className={`block h-0 w-0 border-x-[4px] border-x-transparent border-t-[5px] border-t-unn-green-deep transition ${
+                  loginOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {loginOpen ? (
+              <ul
+                role="menu"
+                className="absolute right-0 top-[calc(100%+0.5rem)] min-w-[12.5rem] border border-unn-line bg-white py-1.5 shadow-lg"
+              >
+                {loginItems.map((item) => (
+                  <li key={item.href} role="none">
+                    <Link
+                      role="menuitem"
+                      href={item.href}
+                      className="block px-4 py-2.5 text-sm font-medium text-unn-ink transition hover:bg-unn-mist hover:text-unn-green-deep"
+                      onClick={() => setLoginOpen(false)}
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </li>
         </ul>
 
@@ -126,14 +186,23 @@ export default function Navbar() {
               </Link>
             </li>
           ))}
-          <li className="pt-2">
-            <Link
-              href="#contact"
-              className="inline-flex h-11 w-full items-center justify-center rounded-sm bg-white text-sm font-semibold text-unn-green-deep"
-              onClick={() => setOpen(false)}
-            >
-              Join Network
-            </Link>
+          <li className="pt-3">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/45">
+              Login
+            </p>
+            <ul className="mt-2 space-y-2">
+              {loginItems.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="inline-flex h-11 w-full items-center justify-center rounded-sm bg-white text-sm font-semibold text-unn-green-deep"
+                    onClick={() => setOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </li>
         </ul>
       </div>

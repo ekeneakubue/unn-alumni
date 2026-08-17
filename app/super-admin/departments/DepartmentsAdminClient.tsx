@@ -240,14 +240,52 @@ export default function DepartmentsAdminClient({
       </div>
 
       <section className="border border-unn-line bg-white">
-        <div className="border-b border-unn-line px-5 py-4">
+        <div className="border-b border-unn-line px-4 py-4 sm:px-5">
           <h2 className="font-display text-2xl text-unn-ink">Department list</h2>
           <p className="mt-1 text-sm text-unn-muted">
             Browse departments by faculty and publish status
           </p>
         </div>
 
-        <div className="overflow-x-auto">
+        <ul className="divide-y divide-unn-line md:hidden">
+          {filtered.map((department) => (
+            <li
+              key={department.id}
+              className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <p className="font-medium text-unn-ink">{department.name}</p>
+                <p className="mt-1 text-sm text-unn-muted">
+                  {department.facultyName} · {formatCount(department.alumniCount)}{" "}
+                  alumni
+                </p>
+                <span
+                  className={`mt-2 inline-flex px-2 py-0.5 text-xs font-semibold ${
+                    department.published
+                      ? "bg-unn-green-soft text-unn-green"
+                      : "bg-unn-mist text-unn-muted"
+                  }`}
+                >
+                  {department.published ? "Published" : "Draft"}
+                </span>
+              </div>
+              <button
+                type="button"
+                disabled={togglingId === department.id}
+                onClick={() => togglePublished(department)}
+                className="min-h-10 self-start rounded-sm border border-unn-line px-3 text-xs font-semibold text-unn-ink transition hover:border-unn-green disabled:opacity-60"
+              >
+                {togglingId === department.id
+                  ? "Saving…"
+                  : department.published
+                    ? "Unpublish"
+                    : "Publish"}
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <div className="hidden overflow-x-auto overscroll-x-contain touch-pan-x md:block">
           <table className="w-full min-w-[48rem] text-left text-sm">
             <thead className="bg-unn-mist/80 text-xs uppercase tracking-[0.12em] text-unn-muted">
               <tr>
@@ -317,7 +355,7 @@ export default function DepartmentsAdminClient({
       </section>
 
       {modalOpen ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-4">
           <button
             type="button"
             aria-label="Close modal overlay"
@@ -328,7 +366,7 @@ export default function DepartmentsAdminClient({
             role="dialog"
             aria-modal="true"
             aria-labelledby="add-department-title"
-            className="relative z-10 w-full max-w-lg border border-unn-line bg-white shadow-xl"
+            className="relative z-10 max-h-[92dvh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-[14px] border border-unn-line bg-white shadow-xl sm:rounded-none"
           >
             <div className="flex items-start justify-between gap-4 border-b border-unn-line px-6 py-5">
               <div>

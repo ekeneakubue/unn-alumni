@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { hash } from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { PrismaClient } from "../generated/prisma/client";
@@ -69,6 +70,49 @@ async function main() {
     const departmentCount = await prisma.department.count();
     console.log(
       `Seeded ${facultyCount} faculties and ${departmentCount} departments.`,
+    );
+
+    const defaultPassword =
+      process.env.SEED_STAFF_PASSWORD?.trim() || "ChangeMe123!";
+    const passwordHash = await hash(defaultPassword, 10);
+
+    const staffSeed = [
+      {
+        email: "superadmin@unn-alumni.org",
+        name: "Super Admin",
+        role: "SUPER_ADMIN" as const,
+      },
+      {
+        email: "admin@unn-alumni.org",
+        name: "Admin User",
+        role: "ADMIN" as const,
+      },
+    ];
+
+    for (const account of staffSeed) {
+      await prisma.user.upsert({
+        where: { email: account.email },
+        create: {
+          email: account.email,
+          name: account.name,
+          role: account.role,
+          status: "ACTIVE",
+          passwordHash,
+          lastActiveAt: new Date(),
+        },
+        update: {
+          name: account.name,
+          role: account.role,
+          status: "ACTIVE",
+          passwordHash,
+        },
+      });
+    }
+
+    console.log(
+      `Seeded staff logins (password: ${defaultPassword}):\n` +
+        `  - superadmin@unn-alumni.org → /super-admin\n` +
+        `  - admin@unn-alumni.org → /admin`,
     );
   } finally {
     await prisma.$disconnect();

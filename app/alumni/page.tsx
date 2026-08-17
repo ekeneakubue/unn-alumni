@@ -2,7 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { AdminAlumniView } from "@/lib/alumni";
-import { alumniInitials, getSessionAlumni } from "@/lib/alumni-auth";
+import { alumniInitials } from "@/lib/alumni-display";
+import { resolveAvatarSrc } from "@/lib/avatar-url";
+import { getSessionAlumni } from "@/lib/alumni-auth";
 
 function statusClass(status: AdminAlumniView["status"]) {
   if (status === "Approved") {
@@ -39,11 +41,12 @@ export default async function AlumniOverviewPage() {
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-unn-line bg-unn-mist">
             {alumni.avatarUrl ? (
               <Image
-                src={alumni.avatarUrl}
+                src={resolveAvatarSrc(alumni.avatarUrl)}
                 alt=""
                 fill
                 className="object-cover"
                 sizes="64px"
+                unoptimized
               />
             ) : (
               <span className="flex h-full w-full items-center justify-center text-lg font-semibold text-unn-green">

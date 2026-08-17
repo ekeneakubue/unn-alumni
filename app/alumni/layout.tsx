@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { alumniInitials, getSessionAlumni } from "@/lib/alumni-auth";
+import { alumniInitials } from "@/lib/alumni-display";
+import { getSessionAlumni } from "@/lib/alumni-auth";
 import AlumniShell from "./AlumniShell";
 
 export const metadata: Metadata = {

@@ -130,9 +130,7 @@ export default function AlumniLoginClient() {
             />
             Alumni portal
           </div>
-          <h1 className="animate-fade-up delay-1 mt-3 font-display text-[clamp(2rem,5.5vw,2.85rem)] leading-none tracking-[-0.02em] text-white">
-            UNN Alumni
-          </h1>
+         
           <p className="animate-fade-up delay-2 mt-2 max-w-sm text-sm text-white/72">
             Sign in with your alumni email and password to continue.
           </p>
@@ -143,10 +141,7 @@ export default function AlumniLoginClient() {
           className="animate-fade-up delay-3 mt-6 border border-white/15 bg-white p-5 shadow-sm md:mt-8 md:p-7"
         >
           <h2 className="font-display text-2xl text-unn-ink">Sign in</h2>
-          <p className="mt-1.5 text-sm text-unn-muted">
-            Use the email on your alumni record.
-          </p>
-
+         
           {success ? (
             <p
               role="status"

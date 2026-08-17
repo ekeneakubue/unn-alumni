@@ -1,5 +1,6 @@
 import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { withDbRetry } from "@/lib/db-retry";
 import type { User, UserRole as DbUserRole, UserStatus as DbUserStatus } from "@/generated/prisma/client";
 
 export type UiUserRole = "Super Admin" | "Admin" | "VC" | "Secretary" | "Staff";
@@ -84,11 +85,23 @@ export function toAdminUserView(user: User): AdminUserView {
   };
 }
 
-export async function listUsers() {
-  const users = await prisma.user.findMany({
-    orderBy: [{ createdAt: "desc" }],
+export async function listUsers(options?: { excludeSuperAdmin?: boolean }) {
+  return withDbRetry("listUsers", async () => {
+    const users = await prisma.user.findMany({
+      where: options?.excludeSuperAdmin
+        ? { role: { not: "SUPER_ADMIN" } }
+        : undefined,
+      orderBy: [{ createdAt: "desc" }],
+    });
+    return users.map(toAdminUserView);
   });
-  return users.map(toAdminUserView);
+}
+
+export async function getUserById(id: string) {
+  return withDbRetry("getUserById", async () => {
+    const user = await prisma.user.findUnique({ where: { id } });
+    return user ? toAdminUserView(user) : null;
+  });
 }
 
 export async function createUser(input: {
@@ -97,37 +110,41 @@ export async function createUser(input: {
   role: UiUserRole;
   password: string;
 }) {
-  const passwordHash = await hash(input.password, 10);
+  return withDbRetry("createUser", async () => {
+    const passwordHash = await hash(input.password, 10);
 
-  const user = await prisma.user.create({
-    data: {
-      name: input.name,
-      email: input.email,
-      passwordHash,
-      role: uiRoleToDb(input.role),
-      status: "ACTIVE",
-      lastActiveAt: new Date(),
-    },
+    const user = await prisma.user.create({
+      data: {
+        name: input.name,
+        email: input.email,
+        passwordHash,
+        role: uiRoleToDb(input.role),
+        status: "ACTIVE",
+        lastActiveAt: new Date(),
+      },
+    });
+    return toAdminUserView(user);
   });
-  return toAdminUserView(user);
 }
 
 export async function updateUserStatus(id: string, status: UiUserStatus) {
-  const dbStatus =
-    status === "Active"
-      ? "ACTIVE"
-      : status === "Invited"
-        ? "INVITED"
-        : "SUSPENDED";
+  return withDbRetry("updateUserStatus", async () => {
+    const dbStatus =
+      status === "Active"
+        ? "ACTIVE"
+        : status === "Invited"
+          ? "INVITED"
+          : "SUSPENDED";
 
-  const user = await prisma.user.update({
-    where: { id },
-    data: {
-      status: dbStatus,
-      lastActiveAt: status === "Active" ? new Date() : undefined,
-    },
+    const user = await prisma.user.update({
+      where: { id },
+      data: {
+        status: dbStatus,
+        lastActiveAt: status === "Active" ? new Date() : undefined,
+      },
+    });
+    return toAdminUserView(user);
   });
-  return toAdminUserView(user);
 }
 
 export async function updateUser(
@@ -139,28 +156,32 @@ export async function updateUser(
     password?: string;
   },
 ) {
-  const data: {
-    name: string;
-    email: string;
-    role: DbUserRole;
-    passwordHash?: string;
-  } = {
-    name: input.name,
-    email: input.email,
-    role: uiRoleToDb(input.role),
-  };
+  return withDbRetry("updateUser", async () => {
+    const data: {
+      name: string;
+      email: string;
+      role: DbUserRole;
+      passwordHash?: string;
+    } = {
+      name: input.name,
+      email: input.email,
+      role: uiRoleToDb(input.role),
+    };
 
-  if (input.password) {
-    data.passwordHash = await hash(input.password, 10);
-  }
+    if (input.password) {
+      data.passwordHash = await hash(input.password, 10);
+    }
 
-  const user = await prisma.user.update({
-    where: { id },
-    data,
+    const user = await prisma.user.update({
+      where: { id },
+      data,
+    });
+    return toAdminUserView(user);
   });
-  return toAdminUserView(user);
 }
 
 export async function deleteUser(id: string) {
-  await prisma.user.delete({ where: { id } });
+  return withDbRetry("deleteUser", async () => {
+    await prisma.user.delete({ where: { id } });
+  });
 }

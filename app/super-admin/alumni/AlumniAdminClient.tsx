@@ -130,22 +130,23 @@ export default function AlumniAdminClient({
           </p>
         </div>
 
-        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <button
             type="button"
             onClick={handleDownloadTemplate}
-            className={`${buttonClass} border border-unn-green bg-white text-unn-green hover:bg-unn-green-soft`}
+            className={`${buttonClass} w-full border border-unn-green bg-white text-unn-green hover:bg-unn-green-soft sm:w-auto`}
           >
-            Download CSV Template
+            <span className="sm:hidden">CSV template</span>
+            <span className="hidden sm:inline">Download CSV Template</span>
           </button>
           <UploadAlumniCsvButton onImported={handleImported} />
           <button
             type="button"
             onClick={handleDeleteAll}
             disabled={deletingAll || initialAlumni.length === 0}
-            className={`${buttonClass} border border-rose-200 bg-white text-rose-700 hover:border-rose-400 hover:bg-rose-50 disabled:opacity-50`}
+            className={`${buttonClass} w-full border border-rose-200 bg-white text-rose-700 hover:border-rose-400 hover:bg-rose-50 disabled:opacity-50 sm:w-auto`}
           >
-            {deletingAll ? "Deleting…" : "Delete all alumni"}
+            {deletingAll ? "Deleting…" : "Delete all"}
           </button>
         </div>
       </div>
@@ -155,7 +156,7 @@ export default function AlumniAdminClient({
       ) : null}
 
       <section className="border border-unn-line bg-white">
-        <div className="flex flex-col gap-3 border-b border-unn-line px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 border-b border-unn-line px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="font-display text-2xl text-unn-ink">Members</h2>
             <p className="mt-1 text-sm text-unn-muted">
@@ -196,7 +197,30 @@ export default function AlumniAdminClient({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <ul className="divide-y divide-unn-line md:hidden">
+          {filtered.map((person) => (
+            <li key={person.id} className="space-y-2 px-4 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-unn-ink">{person.fullName}</p>
+                  <p className="mt-1 truncate text-xs text-unn-muted">
+                    {person.email ?? "No email"}
+                  </p>
+                </div>
+                <StatusPill status={person.status} />
+              </div>
+              <p className="text-sm text-unn-muted">
+                {person.registrationNumber ?? "No reg. no."}
+                {" · "}
+                {person.faculty ?? "No faculty"}
+                {person.department ? ` · ${person.department}` : ""}
+                {person.graduationYear ? ` · ${person.graduationYear}` : ""}
+              </p>
+            </li>
+          ))}
+        </ul>
+
+        <div className="hidden overflow-x-auto overscroll-x-contain touch-pan-x md:block">
           <table className="w-full min-w-[56rem] text-left text-sm">
             <thead className="bg-unn-mist/80 text-xs uppercase tracking-[0.12em] text-unn-muted">
               <tr>
