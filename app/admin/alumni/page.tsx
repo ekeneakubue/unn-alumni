@@ -1,1 +1,3 @@
-export { default, dynamic } from "../../super-admin/alumni/page";
+export const dynamic = "force-dynamic";
+
+export { default } from "../../super-admin/alumni/page";
