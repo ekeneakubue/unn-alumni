@@ -37,8 +37,6 @@ export default function AlumniAdminClient({
   const [statusFilter, setStatusFilter] = useState<"All" | UiAlumniStatus>(
     "All",
   );
-  const [deletingAll, setDeletingAll] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
   const [errorModalOpen, setErrorModalOpen] = useState(Boolean(loadError));
   const [errorMessage, setErrorMessage] = useState(loadError ?? "");
 
@@ -87,34 +85,6 @@ export default function AlumniAdminClient({
     URL.revokeObjectURL(url);
   }
 
-  async function handleDeleteAll() {
-    if (initialAlumni.length === 0) return;
-
-    const confirmed = window.confirm(
-      `Delete all ${initialAlumni.length} alumni records? This cannot be undone.`,
-    );
-    if (!confirmed) return;
-
-    setDeleteError("");
-    setDeletingAll(true);
-
-    try {
-      const response = await fetch("/api/alumni", { method: "DELETE" });
-      const data = await response.json();
-
-      if (!response.ok) {
-        setDeleteError(data.error ?? "Could not delete alumni.");
-        return;
-      }
-
-      startTransition(() => router.refresh());
-    } catch {
-      setDeleteError("Delete failed. Check your connection and try again.");
-    } finally {
-      setDeletingAll(false);
-    }
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -140,20 +110,8 @@ export default function AlumniAdminClient({
             <span className="hidden sm:inline">Download CSV Template</span>
           </button>
           <UploadAlumniCsvButton onImported={handleImported} />
-          <button
-            type="button"
-            onClick={handleDeleteAll}
-            disabled={deletingAll || initialAlumni.length === 0}
-            className={`${buttonClass} w-full border border-rose-200 bg-white text-rose-700 hover:border-rose-400 hover:bg-rose-50 disabled:opacity-50 sm:w-auto`}
-          >
-            {deletingAll ? "Deleting…" : "Delete all"}
-          </button>
         </div>
       </div>
-
-      {deleteError ? (
-        <p className="text-sm text-rose-700">{deleteError}</p>
-      ) : null}
 
       <section className="border border-unn-line bg-white">
         <div className="flex flex-col gap-3 border-b border-unn-line px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
